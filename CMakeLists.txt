@@ -15,6 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
+set(DynamixelSDK_DIR "/home/beatriz/catkin_ws/devel/share/dynamixel_sdk/cmake")
+find_package(dynamixel_sdk REQUIRED)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -118,6 +120,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${DYNAMIXELSDK_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -144,11 +147,12 @@ include_directories(
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
+add_executable(leap_control_node src/leap_control_node.cpp)
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
+ target_link_libraries(leap_control_node
+   ${catkin_LIBRARIES}
+   ${DynamixelSDK_LIBRARIES}
+ )
 
 #############
 ## Install ##
@@ -159,10 +163,16 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+catkin_install_python(PROGRAMS
+   scripts/individual_nodes/read_position_node.py
+   scripts/individual_nodes/read_velocity_node.py
+   scripts/multiple_reading_from_one_motor/manager_node.py
+   scripts/multiple_reading_from_one_motor/read_position_from_manager_node.py
+   scripts/multiple_reading_from_one_motor/read_velocity_from_manager_node.py
+   scripts/multiple_reading_from_one_motor/read_pwm_from_manager_node.py
+   scripts/multiple_reading_from_one_motor/set_position_node.py
+   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+ )
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
@@ -204,3 +214,6 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+
+
