@@ -1,0 +1,1 @@
+Este repositório contém todo o código desenvolvido para controlar a LEAP Hand. Existem duas branches diferentes, a branch ros1 contém os ficheiros desenvolvidos em ros1 e o branch ros2 contém os ficheiros desenvolvidos em ros2
