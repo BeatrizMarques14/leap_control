@@ -23,6 +23,17 @@ setup(
             'read_position = leap_hand_control.individual_nodes.read_position:main',
             'read_velocity = leap_hand_control.individual_nodes.read_velocity:main',
             'read_pwm = leap_hand_control.individual_nodes.read_pwm:main',
+            'manager = leap_hand_control.multiple_readings_one_motor.manager_node:main',
+            'read_position_from_manager_node = leap_hand_control.multiple_readings_one_motor.read_position_from_manager_node:main',
+            'read_velocity_from_manager_node = leap_hand_control.multiple_readings_one_motor.read_velocity_from_manager_node:main',
+            'read_current_from_manager_node = leap_hand_control.multiple_readings_one_motor.read_current_from_manager_node:main',
+            'set_position_one_motor = leap_hand_control.multiple_readings_one_motor.set_position_one_motor:main',
+            'finger_manager = leap_hand_control.one_finger_control.manager_node:main',
+            'finger_positions = leap_hand_control.one_finger_control.read_positions_node:main',
+            'finger_velocities = leap_hand_control.one_finger_control.read_velocities_node:main',
+            'finger_currents = leap_hand_control.one_finger_control.read_currents_node:main',
+            'set_finger_position = leap_hand_control.one_finger_control.set_positions:main'
+
         ],
     },
 )

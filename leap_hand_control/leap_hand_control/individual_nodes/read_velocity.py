@@ -49,7 +49,7 @@ class ReadVelocityNode(Node):
         elif dxl_error != 0:
             self.get_logger().error(self.packet_handler.getRxPacketError(dxl_error))
         else:
-            # Converter para int32 para evitar estouro de valores
+            # Converter para int32 
             dxl_present_velocity_signed = int(np.int32(dxl_present_velocity))
             self.get_logger().info(f"Velocidade Atual: {dxl_present_velocity_signed}")
             self.publisher_.publish(Int32(data=dxl_present_velocity_signed))
