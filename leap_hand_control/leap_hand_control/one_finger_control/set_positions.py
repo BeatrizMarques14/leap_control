@@ -13,24 +13,31 @@ class SetPositions(Node):
         self.publisher.publish(msg)
         self.get_logger().info(f'Publicando posições: {positions}')
 
-
 def main(args=None):
     rclpy.init(args=args)
     node = SetPositions()
     
     try:
         while rclpy.ok():
-            input_str = input("Introduzir as posições (ex: [2048 2048 2048 2048]) ou enviar comando (ex:close hand): ")
-            input_str = re.sub(r'[^0-9\s]', '', input_str)  # Remove colchetes e caracteres não numéricos
-            positions = list(map(int, input_str.split()))
+            input_str = input("Introduzir as posições (ex: 2048 2048 2048 2048) ou comando (ex: close): ").strip()
+            
+            if input_str.lower() == "close":
+                positions = list([1800, 2048, 2890, 2700])
+            elif input_str.lower() == "open":
+                positions = list([1024, 2048, 2048, 2048])
+            else:
+                input_str = re.sub(r'[^0-9\s]', '', input_str)  # Remove caracteres não numéricos
+                positions = list(map(int, input_str.split()))
+
             node.get_logger().info(f'Minhas posições: {positions}')
             node.publish_positions(positions)
+
     except KeyboardInterrupt:
         pass
     
     node.destroy_node()
     rclpy.shutdown()
 
-
 if __name__ == '__main__':
     main()
+
