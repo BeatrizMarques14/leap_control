@@ -23,6 +23,7 @@ CURRENT_BASED_POSITION_MODE = 5
 ADDR_CURRENT_LIMIT = 38 #endereço do limite de corrente
 CURRENT_LIMIT_VALUE = 1800
 GOAL_CURRENT_VALUE = 200
+GRASPING_CURRENT_VALUE = 100
 
 ADDR_PRESENT_CURRENT = 126
 ADDR_PRESENT_POSITION = 132  # Endereço da posição atual
@@ -39,13 +40,16 @@ PROFILE_VELOCITY_VALUE = 50
 
 
 # Lista de IDs dos motores
-MOTOR_IDS = [1, 2, 3, 4]  # Ajusta conforme necessário
+MOTOR_IDS = [1, 2, 3, 4]  
 
 
 class DynamixelReader(Node):
     def __init__(self):
         super().__init__('dynamixel_reader')
+        self.vel = np.zeros(4)
+        self.current = GOAL_CURRENT_VALUE
 
+        
         self.publisher_position = self.create_publisher(Int32MultiArray, '/dynamixel_finger_positions', 10)
         self.publisher_velocity = self.create_publisher(Int32MultiArray, '/dynamixel_finger_velocities', 10)
         self.publisher_current = self.create_publisher(Int32MultiArray, '/dynamixel_finger_currents', 10)
@@ -112,8 +116,40 @@ class DynamixelReader(Node):
             self.publisher_position.publish(Int32MultiArray(data=positions))
         if velocities:
             self.publisher_velocity.publish(Int32MultiArray(data=velocities))
+            #self.get_logger().info(f'Velocidades: {abs(np.array(velocities) - self.vel)}')
         if currents:
             self.publisher_current.publish(Int32MultiArray(data=currents))
+            #self.get_logger().info(f'Correntes: {any(np.array(currents) > 150)}')
+        
+
+        #quando existe redução da velocidade e aumento de corrente, diminui a goal current para não esmagar objetos
+        if (any(abs(np.array(velocities) - self.vel) < 0.1*PROFILE_VELOCITY_VALUE)) and (any(np.array(currents) > 0.8*GOAL_CURRENT_VALUE)):
+            self.get_logger().info('Grasping!!!!')
+            self.set_goal_current(GRASPING_CURRENT_VALUE)
+
+        elif (self.current == GRASPING_CURRENT_VALUE and all(np.array(currents) < 0.15*self.current)):
+            #se a corrente for pequena, o dedo não está a apanhar nada e apenas se movimenta
+            self.set_goal_current(GOAL_CURRENT_VALUE)
+
+        self.vel = velocities
+
+
+    def set_goal_current(self,goal_current):
+
+        self.group_bulk_write.clearParam()
+        param_goal_current = [DXL_LOBYTE(DXL_LOWORD(goal_current)), DXL_HIBYTE(DXL_LOWORD(goal_current))]
+        for motor_id in MOTOR_IDS:
+            add_success_curr = self.group_bulk_write.addParam(motor_id, ADDR_GOAL_CURRENT, 2,param_goal_current)
+
+        dxl_comm_result = self.group_bulk_write.txPacket()
+        if dxl_comm_result != COMM_SUCCESS:
+            self.get_logger().error('Erro ao enviar nova corrente para os motores')
+        else:
+            self.get_logger().info(f'Novas correntes enviadas com sucesso {goal_current}')
+            self.current = goal_current
+
+
+
     
     def set_motor_positions(self, msg):
         """Define as posições dos motores ao receber mensagem no tópico."""

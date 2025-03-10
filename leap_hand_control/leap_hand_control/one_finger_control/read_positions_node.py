@@ -13,7 +13,7 @@ class ReadPositions(Node):
 
          # Criar timestamp para o nome do ficheiro
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.csv_filename = f"/home/beatrix/ros2_ws/src/leap_control/leap_hand_control/leap_hand_control/data/positions/finger_positions_{timestamp}.csv"
+        self.csv_filename = f"/home/beatrix/ros2_ws/src/leap_control/leap_hand_control/leap_hand_control/data/positionsfinger_positions_{timestamp}.csv"
 
         # Criar e escrever o cabeçalho do CSV
         with open(self.csv_filename, mode="w", newline="") as file:
