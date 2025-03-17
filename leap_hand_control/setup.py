@@ -10,7 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name, ['launch/read_nodes.py'])
+        #('share/' + package_name, ['launch/read_nodes.py'])
     ],
     install_requires=['setuptools','dynamixel_sdk'],
     zip_safe=True,
@@ -33,7 +33,11 @@ setup(
             'finger_positions = leap_hand_control.one_finger_control.read_positions_node:main',
             'finger_velocities = leap_hand_control.one_finger_control.read_velocities_node:main',
             'finger_currents = leap_hand_control.one_finger_control.read_currents_node:main',
-            'set_finger_position = leap_hand_control.one_finger_control.set_positions:main'
+            'set_finger_position = leap_hand_control.one_finger_control.set_positions:main',
+            'finger_grasping = leap_hand_control.one_finger_control.grasping_node:main',
+            'hand_manager = leap_hand_control.hand_control.manager_node:main',
+            'set_fingers_position = leap_hand_control.hand_control.set_positions:main',
+            'middle_manager = leap_hand_control.hand_control.middle_node:main',
 
         ],
     },

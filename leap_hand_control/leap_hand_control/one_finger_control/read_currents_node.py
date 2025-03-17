@@ -40,7 +40,7 @@ class ReadCurrents(Node):
         plt.ion()
         self.fig, self.ax = plt.subplots()
         self.lines = {motor: self.ax.plot([], [], label=motor)[0] for motor in self.motor_data.keys()}
-        self.ax.set_ylim(-200, 200)
+        self.ax.set_ylim(-300, 300)
         self.ax.set_xlabel("Tempo (s)")
         self.ax.set_ylabel("Corrente Consumida (mA)")
         self.ax.legend()
