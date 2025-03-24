@@ -34,23 +34,47 @@ def main(args=None):
 
             finger_name = input_parts[0].lower()
 
-            if finger_name not in finger_names:
+            data_to_send = []
+
+            if len(input_parts) == 2 and input_parts[0].lower() == "hand":
+                command = input_parts[1].lower()
+                if command == "close":
+                    # Enviar posições de fecho para middle e thumb
+                    data_to_send.extend([finger_names.index("middle"), 1564, 2048, 3136, 2569])
+                    data_to_send.extend([finger_names.index("thumb"), 2550, 630, 2935, 3030])
+                elif command == "open":
+                    # Enviar posições de abertura para middle e thumb
+                    data_to_send.extend([finger_names.index("middle"), 1024, 2048, 2048, 2048])
+                    data_to_send.extend([finger_names.index("thumb"), 2048, 1024, 2048, 2048])
+                else:
+                    node.get_logger().error("Comando inválido para 'hand'. Use 'close' ou 'open'.")
+                    continue
+
+            elif finger_name not in finger_names:
                 node.get_logger().error("Nome do dedo inválido! Escolha entre: index, middle, ring, thumb.")
                 continue
 
-            if len(input_parts) == 2 and input_parts[1].lower() in ["close", "open"]:
+            elif len(input_parts) == 2 and input_parts[1].lower() in ["close", "open"]:
                 command = input_parts[1].lower()
                 if command == "close":
-                    positions = [1800, 2048, 2890, 2700]
+                    if finger_name == "middle":
+                        positions = [1800, 2048, 2890, 2700]
+                    elif finger_name == "thumb":
+                        positions = [2550, 630, 2935, 3030]
                 elif command == "open":
-                    positions = [1024, 2048, 2048, 2048]
+                    if finger_name == "middle":
+                        positions = [1024, 2048, 2048, 2048]
+                    elif finger_name == "thumb":
+                        positions = [2048, 1024, 2048, 2048]
+                data_to_send.extend([finger_names.index(finger_name)] + positions)
             else:
                 input_values = " ".join(input_parts[1:])  # Ignorar o nome do dedo
                 input_values = re.sub(r'[^0-9\s]', '', input_values)  # Remover caracteres não numéricos
                 positions = list(map(int, input_values.split()))
-
+                data_to_send.extend([finger_names.index(finger_name)] + positions)
+            
             node.get_logger().info(f'Dedo: {finger_name}, Posições: {positions}')
-            node.publish_positions([finger_names.index(finger_name)] + positions)  # Adiciona o índice do dedo à mensagem
+            node.publish_positions(data_to_send)  # Adiciona o índice do dedo à mensagem
 
     except KeyboardInterrupt:
         pass

@@ -13,9 +13,9 @@ GOAL_CURRENT_VALUE = 300
 GRASPING_CURRENT_VALUE = 100
 
 
-class Middle(Node):
+class Thumb(Node):
     def __init__(self):
-        super().__init__('middle_manager')
+        super().__init__('thumb_manager')
 
         self.publisher = self.create_publisher(Int32MultiArray, '/set_fingers_currents', 10)
 
@@ -36,7 +36,7 @@ class Middle(Node):
 
         self.subscription = self.create_subscription(
             Float32MultiArray,
-            '/middle_data',
+            '/thumb_data',
             self.listener_callback,
             10) 
 
@@ -67,7 +67,7 @@ class Middle(Node):
 
 
     def publish_currents(self, currents):
-        msg = Int32MultiArray(data=[1] + list(currents))
+        msg = Int32MultiArray(data=[3] + list(currents))
         self.get_logger().info(f'Correntes: {currents}')
         self.publisher.publish(msg)
         #self.get_logger().info(f'Publicando posições: {currents}')
@@ -76,7 +76,7 @@ class Middle(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Middle()
+    node = Thumb()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

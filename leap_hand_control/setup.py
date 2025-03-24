@@ -38,6 +38,7 @@ setup(
             'hand_manager = leap_hand_control.hand_control.manager_node:main',
             'set_fingers_position = leap_hand_control.hand_control.set_positions:main',
             'middle_manager = leap_hand_control.hand_control.middle_node:main',
+            'thumb_manager = leap_hand_control.hand_control.thumb_node:main',
 
         ],
     },

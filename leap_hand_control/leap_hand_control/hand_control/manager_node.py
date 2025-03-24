@@ -61,12 +61,15 @@ class DynamixelReader(Node):
 
 
         self.subscription = self.create_subscription(Int32MultiArray, '/set_fingers_positions', self.set_motor_positions, 2000)
+        self.subscription = self.create_subscription(Int32MultiArray, '/set_fingers_currents', self.set_currents, 2000)
 
         # Inicializar comunicação com Dynamixel
         self.port_handler = PortHandler(PORT_NAME)
         self.packet_handler = PacketHandler(PROTOCOL_VERSION)
         self.group_bulk_read = GroupBulkRead(self.port_handler, self.packet_handler)
         self.group_bulk_write = GroupBulkWrite(self.port_handler, self.packet_handler)
+
+        self.time_last_vel = self.get_clock().now()
 
 
         if self.port_handler.openPort() and self.port_handler.setBaudRate(BAUDRATE):
@@ -113,7 +116,8 @@ class DynamixelReader(Node):
         if self.group_bulk_read.txRxPacket() != COMM_SUCCESS:
             self.get_logger().error("Erro ao ler os motores.")
             return
-        self.time_now = time.time()
+        self.time_now = self.get_clock().now()
+        time_diff = (self.time_now - self.time_last_vel).nanoseconds / 1e9
         positions, velocities, currents = [], [], []
         index_data = []
         middle_data = []
@@ -149,36 +153,77 @@ class DynamixelReader(Node):
             self.publisher_velocity.publish(Int32MultiArray(data=velocities))
             self.publisher_current.publish(Int32MultiArray(data=currents))
 
-            self.publisher_index.publish(Float32MultiArray(data = index_data+[self.time_now]))
-            self.publisher_middle.publish(Float32MultiArray(data = middle_data+[self.time_now]))
-            self.publisher_ring.publish(Float32MultiArray(data = ring_data+[self.time_now]))
-            self.publisher_thumb.publish(Float32MultiArray(data = thumb_data+[self.time_now]))
-            self.get_logger().info(f'Time: {self.time_now}')
+            self.publisher_index.publish(Float32MultiArray(data = index_data+[time_diff]))
+            self.publisher_middle.publish(Float32MultiArray(data = middle_data+[time_diff]))
+            self.publisher_ring.publish(Float32MultiArray(data = ring_data+[time_diff]))
+            self.publisher_thumb.publish(Float32MultiArray(data = thumb_data+[time_diff]))
+            #self.get_logger().info(f'Time: {time_diff}')
+        self.time_last_vel = self.time_now
         
     
     def set_motor_positions(self, msg):
         """Define as posições dos motores ao receber mensagem no tópico."""
-        positions = msg.data[1:5]
-        finger = msg.data[0]
-
-        if len(positions) != 4:
-            self.get_logger().error("Número incorreto de posições recebidas.")
+        
+        if len(msg.data) % 5 != 0:
+            self.get_logger().error("Formato incorreto da mensagem recebida.")
             return
 
         self.group_bulk_write.clearParam()
-        for motor_id,pos in zip(range(4),positions):
-            param_goal_position = [DXL_LOBYTE(DXL_LOWORD(pos)), DXL_HIBYTE(DXL_LOWORD(pos)),
-                                   DXL_LOBYTE(DXL_HIWORD(pos)), DXL_HIBYTE(DXL_HIWORD(pos))]
-            add_success_pos = self.group_bulk_write.addParam((motor_id+4*finger), ADDR_GOAL_POSITION, 4,param_goal_position)
 
-            if not add_success_pos:
-                self.get_logger().error(f'Erro ao adicionar motor {motor_id} ao Bulk Write')
+        for i in range(0, len(msg.data), 5):
+            finger = msg.data[i]  # Índice do dedo
+            positions = msg.data[i + 1:i + 5]  # Quatro posições para os motores desse dedo
+
+            if len(positions) != 4:
+                self.get_logger().error(f"Número incorreto de posições recebidas para o dedo {finger}.")
+                continue
+
+            for motor_id, pos in zip(range(4), positions):
+                param_goal_position = [
+                    DXL_LOBYTE(DXL_LOWORD(pos)), 
+                    DXL_HIBYTE(DXL_LOWORD(pos)),
+                    DXL_LOBYTE(DXL_HIWORD(pos)), 
+                    DXL_HIBYTE(DXL_HIWORD(pos))
+                ]
+                add_success_pos = self.group_bulk_write.addParam(
+                    (motor_id + 4 * finger), ADDR_GOAL_POSITION, 4, param_goal_position
+                )
+
+                if not add_success_pos:
+                    self.get_logger().error(f'Erro ao adicionar motor {motor_id + 4 * finger} ao Bulk Write')
 
         dxl_comm_result = self.group_bulk_write.txPacket()
         if dxl_comm_result != COMM_SUCCESS:
             self.get_logger().error('Erro ao enviar posições para os motores')
         else:
             self.get_logger().info('Posições enviadas com sucesso')
+
+
+        self.group_bulk_write.clearParam()
+    
+    def set_currents(self, msg):
+        """Define as correntes dos motores ao receber mensagem no tópico."""
+        currents = msg.data[1:5]
+        finger = msg.data[0]
+
+        if len(currents) != 4:
+            self.get_logger().info(f'Correntes recebidas:{currents}')
+            self.get_logger().error("Número incorreto de posições recebidas.")
+            return
+
+        self.group_bulk_write.clearParam()
+        for motor_id,curr in zip(range(4),currents):
+            param_goal_curr = [DXL_LOBYTE(DXL_LOWORD(curr)), DXL_HIBYTE(DXL_LOWORD(curr))]
+            add_success_curr = self.group_bulk_write.addParam((motor_id+4*finger), ADDR_GOAL_CURRENT, 4,param_goal_curr)
+
+            if not add_success_curr:
+                self.get_logger().error(f'Erro ao adicionar motor {motor_id} ao Bulk Write')
+
+        dxl_comm_result = self.group_bulk_write.txPacket()
+        if dxl_comm_result != COMM_SUCCESS:
+            self.get_logger().error('Erro ao enviar correntes para os motores')
+        else:
+            self.get_logger().info('Correntes enviadas com sucesso')
 
 
         self.group_bulk_write.clearParam()
