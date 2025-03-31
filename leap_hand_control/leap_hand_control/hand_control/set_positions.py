@@ -23,6 +23,7 @@ def main(args=None):
     rclpy.init(args=args)
     node = SetPositions()
     finger_names = ["index", "middle", "ring", "thumb"]
+    positions = []
     
     try:
         while rclpy.ok():

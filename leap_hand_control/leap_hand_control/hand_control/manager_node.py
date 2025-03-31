@@ -41,12 +41,34 @@ ADDR_PROFILE_VELOCITY = 112
 PROFILE_VELOCITY_VALUE = 50
 
 
+class Finger:
+    def __init__(self, name, factor, motor_factors):
+        self.name = name
+        self.factor = factor  # Velocidade relativa do dedo
+        self.motor_factors = motor_factors  # Velocidades relativas dos motores do dedo
+
+    def get_motor_speed(self, motor_name):
+        return PROFILE_VELOCITY_VALUE * self.factor * self.motor_factors.get(motor_name, 1.0)
+    
+    def get_finger_speed(self):
+        return PROFILE_VELOCITY_VALUE * self.factor
+
+
+
 # Lista de IDs dos motores
 MOTOR_IDS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] 
 
 class DynamixelReader(Node):
     def __init__(self):
         super().__init__('manager_node')
+
+        # Criar os dedos com as respetivas configurações
+        self.fingers = [
+            Finger("index", 1, {"0": 1, "1": 1, "2": 1, "3": 1}),   # finger_0
+            Finger("middle", 1, {"4": 2, "5": 1, "6": 1, "7": 1}),  # finger_1
+            Finger("ring", 1, {"8": 1, "9": 1, "10": 1, "11": 1}), # finger_2
+            Finger("thumb", 1, {"12": 1, "13": 1, "14": 1, "15": 1}) # finger_3
+        ]
 
         #topicos para enviar os dados dos motores para posterior analise
         self.publisher_position = self.create_publisher(Int32MultiArray, '/dynamixel_finger_positions', 10)
@@ -104,7 +126,7 @@ class DynamixelReader(Node):
             self.packet_handler.write1ByteTxRx(self.port_handler, motor_id, TORQUE_ENABLE, 0)
             self.group_bulk_read.addParam(motor_id, ADDR_PRESENT_CURRENT, TOTAL_LENGTH)
             self.packet_handler.write1ByteTxRx(self.port_handler, motor_id, ADDR_OPERATING_MODE, CURRENT_BASED_POSITION_MODE)
-            self.packet_handler.write4ByteTxRx(self.port_handler, motor_id, ADDR_PROFILE_VELOCITY, PROFILE_VELOCITY_VALUE)
+            self.packet_handler.write4ByteTxRx(self.port_handler, motor_id, ADDR_PROFILE_VELOCITY, self.get_motor_speed(motor_id))
             self.packet_handler.write2ByteTxRx(self.port_handler, motor_id, ADDR_GOAL_CURRENT, GOAL_CURRENT_VALUE)
             self.packet_handler.write1ByteTxRx(self.port_handler, motor_id, TORQUE_ENABLE, 1)
 
@@ -227,6 +249,12 @@ class DynamixelReader(Node):
 
 
         self.group_bulk_write.clearParam()
+
+    def get_motor_speed(self,motor_id):
+        finger_index = motor_id // 4
+        print(self.fingers[finger_index].get_motor_speed(str(motor_id)))
+        return self.fingers[finger_index].get_motor_speed(str(motor_id))
+
 
 
     
