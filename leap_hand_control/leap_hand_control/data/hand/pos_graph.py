@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Carregar o CSV
-file_path = "data_20250331_120040.csv"
+file_path = "release.csv"
 df = pd.read_csv(file_path)
 
 

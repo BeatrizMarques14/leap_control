@@ -48,14 +48,17 @@ class Middle(Node):
         self.vels = [msg.data[vel] for vel in range(1,len(msg.data)-1,3)]
         self.currs = [msg.data[curr] for curr in range(2,len(msg.data)-1,3)]
         time_diff = msg.data[len(msg.data)-1]
+
+        #self.get_logger().info(f'Acc:{(abs((np.array(self.vels) - self.last_vels)) / time_diff)}')
+        # self.get_logger().info(f'grasping:{self.is_grasping}')
         
         #quando existe redução da velocidade e aumento de corrente, diminui a goal current para não esmagar objetos
-        if (any(abs((np.array(self.vels) - self.last_vels)) / time_diff) < 0.1) and (any(np.array(self.currs) > 0.8*GOAL_CURRENT_VALUE)) and (self.is_grasping == 0):
+        if (any(abs((np.array(self.vels) - self.last_vels)) / time_diff) < 0.1) and (any(abs(np.array(self.currs)) > 0.8*GOAL_CURRENT_VALUE)) and (self.is_grasping == 0):
             self.get_logger().info('Grasping!!!!')
             #self.get_logger().info(f'Correntes: {np.ones(4, dtype=int)*GRASPING_CURRENT_VALUE}')
             self.publish_currents(np.ones(4, dtype=int)*GRASPING_CURRENT_VALUE)
             self.is_grasping = 1
-        elif (self.is_grasping == 1) and all(np.array(self.currs) < 0.8*self.currents):
+        elif (self.is_grasping == 1) and all(abs(np.array(self.currs)) < 0.5*GOAL_CURRENT_VALUE) and  (all(abs((np.array(self.vels) - self.last_vels)) / time_diff) > 0.1):
             #se a corrente for pequena, o dedo não está a apanhar nada e apenas se movimenta
             self.publish_currents(np.ones(4, dtype=int)*GOAL_CURRENT_VALUE)
             self.is_grasping = 0

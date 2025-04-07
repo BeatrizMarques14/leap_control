@@ -40,6 +40,7 @@ setup(
             'middle_manager = leap_hand_control.hand_control.middle_node:main',
             'thumb_manager = leap_hand_control.hand_control.thumb_node:main',
             'save_data = leap_hand_control.hand_control.save_data_node:main',
+            'check_colisions = leap_hand_control.hand_control.check_colisions:main',
 
         ],
     },

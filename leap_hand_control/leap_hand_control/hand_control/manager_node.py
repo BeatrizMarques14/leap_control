@@ -65,7 +65,7 @@ class DynamixelReader(Node):
         # Criar os dedos com as respetivas configurações
         self.fingers = [
             Finger("index", 1, {"0": 1, "1": 1, "2": 1, "3": 1}),   # finger_0
-            Finger("middle", 1, {"4": 2, "5": 1, "6": 1, "7": 1}),  # finger_1
+            Finger("middle", 1, {"4": 1, "5": 1, "6": 1, "7": 1}),  # finger_1
             Finger("ring", 1, {"8": 1, "9": 1, "10": 1, "11": 1}), # finger_2
             Finger("thumb", 1, {"12": 1, "13": 1, "14": 1, "15": 1}) # finger_3
         ]
@@ -236,7 +236,7 @@ class DynamixelReader(Node):
         self.group_bulk_write.clearParam()
         for motor_id,curr in zip(range(4),currents):
             param_goal_curr = [DXL_LOBYTE(DXL_LOWORD(curr)), DXL_HIBYTE(DXL_LOWORD(curr))]
-            add_success_curr = self.group_bulk_write.addParam((motor_id+4*finger), ADDR_GOAL_CURRENT, 4,param_goal_curr)
+            add_success_curr = self.group_bulk_write.addParam((motor_id+4*finger), ADDR_GOAL_CURRENT, 2,param_goal_curr)
 
             if not add_success_curr:
                 self.get_logger().error(f'Erro ao adicionar motor {motor_id} ao Bulk Write')
