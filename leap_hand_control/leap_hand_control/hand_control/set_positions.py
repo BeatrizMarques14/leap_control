@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Int32MultiArray
+from std_msgs.msg import Int32
 import re
 import numpy as np
 import time
@@ -9,13 +10,17 @@ class SetPositions(Node):
     def __init__(self):
         super().__init__('set_positions')
         self.publisher = self.create_publisher(Int32MultiArray, '/set_fingers_positions', 10)
-        self.min = np.array([-1.047, -0.314, -0.506, -0.366, -1.047, -0.314, -0.506, -0.366, -1.047, -0.314, -0.506, -0.366, -0.349, -0.47, -1.20, -1.34]) + np.pi #limites minimos de todos os motores para simulação fornecidos peo codigo da LEAP Hand
-        self.max = np.array([1.047,    2.23,  1.885,  2.042,  1.047,   2.23,  1.885,  2.042,  1.047,   2.23,  1.885,  2.042,  2.094,  2.443, 1.90,  1.88]) + np.pi #limites maximos de todos os motores para simulação fornecidos peo codigo da LEAP Hand
+        self.experience_publisher = self.create_publisher(Int32, '/set_class', 10)
 
     def publish_positions(self, positions):
         msg = Int32MultiArray(data=positions)
         self.publisher.publish(msg)
         self.get_logger().info(f'Publicando posições: {positions}')
+
+    def publish_class(self,new_class):
+        msg = Int32(data=new_class)
+        self.experience_publisher.publish(msg)
+        self.get_logger().info(f'Publicando classe: {new_class}')
 
     def publish_ordered_positions(self, data):
         # Ordenar os dados com base no offset
@@ -61,7 +66,7 @@ def main(args=None):
             finger_name = input_parts[0].lower()
 
             data_to_send = []
-            offsets = [0,0]
+            offsets = [0,0,0,0]
 
             if len(input_parts) >= 2 and input_parts[0].lower() == "hand":
                 command = input_parts[1].lower()
@@ -71,16 +76,15 @@ def main(args=None):
                         offsets = list(map(float, input_parts[2:]))
                         offsets = [int(offset * 1000) for offset in offsets] #converter para milissegundos
 
-                    # Enviar posições de fecho para middle e thumb
+                    # Enviar posições de fecho
                     data_to_send = [
-                        [finger_names.index("middle"), 2462, 2048, 2369, 2929, offsets[0]],
-                        [finger_names.index("thumb"), 3016, 591, 2980, 2483, offsets[1]]
+                        [finger_names.index("middle"), 3486, 2048, 2369, 2929, offsets[1]],
+                        [finger_names.index("thumb"), 3016, 591, 2980, 2483, offsets[3]],
+                        [finger_names.index("index"), 3486, 2048, 2369, 2929, offsets[0]],
+                        [finger_names.index("ring"), 3486, 2048, 2369, 2929, offsets[2]],
                         #[finger_names.index("thumb"), 2550, 630, 2935, 3030]
                     ]
 
-                    # # Ordenar os dados por ordem crescente de offset
-                    # data_to_send.sort(key=lambda x: x[-1])
-                    # data_to_send = [item for sublist in data_to_send for item in sublist] 
                     node.publish_ordered_positions(data_to_send)
                     
                     
@@ -90,21 +94,144 @@ def main(args=None):
                         offsets = list(map(float, input_parts[2:]))
                         offsets = [int(offset * 1000) for offset in offsets] #converter para milissegundos
 
-                    # Enviar posições de abertura para middle e thumb
+                    # Enviar posições de abertura
                     data_to_send = [
-                        [finger_names.index("middle"), 1024, 2048, 2048, 2048,offsets[0]],
-                        [finger_names.index("thumb"), 2048, 1024, 2048, 2048,offsets[1]]
+                        [finger_names.index("middle"), 2048, 2048, 2048, 2048,offsets[1]],
+                        [finger_names.index("thumb"), 2048, 1024, 2048, 2048,offsets[3]],
+                        [finger_names.index("index"), 2048, 2048, 2048, 2048,offsets[0]],
+                        [finger_names.index("ring"), 2048, 2048, 2048, 2048,offsets[2]],
                         #[finger_names.index("thumb"), 2550, 630, 2935, 3030]
                     ]
 
-                    # Ordenar os dados por ordem crescente de offset
-                    # data_to_send.sort(key=lambda x: x[-1])
-                    # data_to_send = [item for sublist in data_to_send for item in sublist] 
                     node.publish_ordered_positions(data_to_send)
                     
                 else:
                     node.get_logger().error("Comando inválido para 'hand'. Use 'close' ou 'open'.")
                     continue
+
+            elif len(input_parts) == 1 and input_parts[0].lower() == "wave":
+                offsets = [500,700,900,0]
+                data_to_send = [
+                        [finger_names.index("middle"), 3486, 2048, 2369, 2929, offsets[1]],
+                        [finger_names.index("thumb"), 3016, 591, 2980, 2483, offsets[3]],
+                        [finger_names.index("index"), 3486, 2048, 2369, 2929, offsets[0]],
+                        [finger_names.index("ring"), 3486, 2048, 2369, 2929, offsets[2]],
+                        #[finger_names.index("thumb"), 2550, 630, 2935, 3030]
+                    ]
+                
+                node.publish_ordered_positions(data_to_send)
+
+                min_offset = min(offsets)
+                max_offset = max(offsets)
+
+                time.sleep(max_offset/1000 + 0.5)
+
+                offsets = [max_offset - (o - min_offset) for o in offsets]
+
+
+                data_to_send = [
+                        [finger_names.index("middle"), 2048, 2048, 2048, 2048,offsets[1]],
+                        [finger_names.index("thumb"), 2048, 1024, 2048, 2048,offsets[3]],
+                        [finger_names.index("index"), 2048, 2048, 2048, 2048,offsets[0]],
+                        [finger_names.index("ring"), 2048, 2048, 2048, 2048,offsets[2]],
+                        #[finger_names.index("thumb"), 2550, 630, 2935, 3030]
+                    ]
+                node.publish_ordered_positions(data_to_send)
+
+            elif len(input_parts) == 1 and input_parts[0].lower() == "0":
+                node.publish_class(0)
+                offsets = [0,0,0,0]
+                data_to_send = [
+                        [finger_names.index("middle"), 3486, 2048, 2369, 2929, offsets[1]],
+                        [finger_names.index("thumb"), 3016, 591, 2980, 2483, offsets[3]],
+                        [finger_names.index("index"), 3486, 2048, 2369, 2929, offsets[0]],
+                        [finger_names.index("ring"), 3486, 2048, 2369, 2929, offsets[2]],
+                        #[finger_names.index("thumb"), 2550, 630, 2935, 3030]
+                    ]
+                
+                node.publish_ordered_positions(data_to_send)
+
+
+                time.sleep(2)
+
+
+                data_to_send = [
+                        [finger_names.index("middle"), 2048, 2048, 2048, 2048,offsets[1]],
+                        [finger_names.index("thumb"), 2048, 1024, 2048, 2048,offsets[3]],
+                        [finger_names.index("index"), 2048, 2048, 2048, 2048,offsets[0]],
+                        [finger_names.index("ring"), 2048, 2048, 2048, 2048,offsets[2]],
+                        #[finger_names.index("thumb"), 2550, 630, 2935, 3030]
+                    ]
+                
+                node.publish_ordered_positions(data_to_send)
+
+
+                data_to_send = [
+                        [finger_names.index("middle"), 2048, 2048, 2048, 2048,offsets[1]],
+                        [finger_names.index("thumb"), 2048, 1024, 2048, 2048,offsets[3]],
+                        [finger_names.index("index"), 2048, 2048, 2048, 2048,offsets[0]],
+                        [finger_names.index("ring"), 2048, 2048, 2048, 2048,offsets[2]],
+                        #[finger_names.index("thumb"), 2550, 630, 2935, 3030]
+                    ]
+                node.publish_ordered_positions(data_to_send)
+
+            
+            elif len(input_parts) == 1 and input_parts[0].lower() == "1":
+                node.publish_class(1)
+                offsets = [500,500,500,0]
+                data_to_send = [
+                        [finger_names.index("middle"), 3486, 2048, 2369, 2929, offsets[1]],
+                        [finger_names.index("thumb"), 3016, 591, 2980, 2483, offsets[3]],
+                        [finger_names.index("index"), 3486, 2048, 2369, 2929, offsets[0]],
+                        [finger_names.index("ring"), 3486, 2048, 2369, 2929, offsets[2]],
+                        #[finger_names.index("thumb"), 2550, 630, 2935, 3030]
+                    ]
+                
+                node.publish_ordered_positions(data_to_send)
+
+
+                time.sleep(2)
+
+
+                offsets = [0,0,0,500]
+
+                data_to_send = [
+                        [finger_names.index("middle"), 2048, 2048, 2048, 2048,offsets[1]],
+                        [finger_names.index("thumb"), 2048, 1024, 2048, 2048,offsets[3]],
+                        [finger_names.index("index"), 2048, 2048, 2048, 2048,offsets[0]],
+                        [finger_names.index("ring"), 2048, 2048, 2048, 2048,offsets[2]],
+                        #[finger_names.index("thumb"), 2550, 630, 2935, 3030]
+                    ]
+                node.publish_ordered_positions(data_to_send)
+            
+            elif len(input_parts) == 1 and input_parts[0].lower() == "2":
+                node.publish_class(2)
+                offsets = [0,0,0,800]
+                data_to_send = [
+                        [finger_names.index("middle"), 3486, 2048, 2369, 2929, offsets[1]],
+                        [finger_names.index("thumb"), 3016, 591, 2980, 2483, offsets[3]],
+                        [finger_names.index("index"), 3486, 2048, 2369, 2929, offsets[0]],
+                        [finger_names.index("ring"), 3486, 2048, 2369, 2929, offsets[2]],
+                        #[finger_names.index("thumb"), 2550, 630, 2935, 3030]
+                    ]
+                
+                node.publish_ordered_positions(data_to_send)
+
+
+                time.sleep(2)
+                
+
+                offsets = [500,500,500,0]
+
+                data_to_send = [
+                        [finger_names.index("middle"), 2048, 2048, 2048, 2048,offsets[1]],
+                        [finger_names.index("thumb"), 2048, 1024, 2048, 2048,offsets[3]],
+                        [finger_names.index("index"), 2048, 2048, 2048, 2048,offsets[0]],
+                        [finger_names.index("ring"), 2048, 2048, 2048, 2048,offsets[2]],
+                        #[finger_names.index("thumb"), 2550, 630, 2935, 3030]
+                    ]
+                node.publish_ordered_positions(data_to_send)
+
 
             elif finger_name not in finger_names:
                 node.get_logger().error("Nome do dedo inválido! Escolha entre: index, middle, ring, thumb.")
@@ -114,18 +241,28 @@ def main(args=None):
                 command = input_parts[1].lower()
                 if command == "close":
                     if finger_name == "middle":
-                        positions = [2462, 2048, 2369, 2929]
+                        positions = [3486, 2048, 2369, 2929]
                     elif finger_name == "thumb":
                         #positions = [2550, 630, 2935, 3030]
                         positions = [3016, 591, 2980, 2483]
+                    elif finger_name == "index":
+                        positions = [3486, 2048, 2369, 2929]
+                    elif finger_name == "ring":
+                        positions = [3486, 2048, 2369, 2929]
                 elif command == "open":
                     if finger_name == "middle":
-                        positions = [1024, 2048, 2048, 2048]
+                        positions = [2048, 2048, 2048, 2048]
                     elif finger_name == "thumb":
                         positions = [2048, 1024, 2048, 2048]
+                    elif finger_name == "index":
+                        positions = [2048, 2048, 2048, 2048]
+                    elif finger_name == "ring":
+                        positions = [2048, 2048, 2048, 2048]
                 data_to_send.extend([finger_names.index(finger_name)] + positions)
                 node.get_logger().info(f'Dedo: {finger_name}, Posições: {positions}, Offsets: {offsets}')
                 node.publish_positions(data_to_send) 
+
+            
 
             else:
                 input_values = " ".join(input_parts[1:])  # Ignorar o nome do dedo

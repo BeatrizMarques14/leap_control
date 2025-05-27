@@ -25,7 +25,7 @@ CURRENT_BASED_POSITION_MODE = 5
 
 ADDR_CURRENT_LIMIT = 38 #endereço do limite de corrente
 CURRENT_LIMIT_VALUE = 1800
-GOAL_CURRENT_VALUE = 300
+GOAL_CURRENT_VALUE = 500
 
 ADDR_PRESENT_CURRENT = 126
 ADDR_PRESENT_POSITION = 132  # Endereço da posição atual
@@ -56,7 +56,7 @@ class Finger:
 
 
 # Lista de IDs dos motores
-MOTOR_IDS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] 
+MOTOR_IDS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,14,15] 
 
 class DynamixelReader(Node):
     def __init__(self):
@@ -87,6 +87,7 @@ class DynamixelReader(Node):
 
         # Inicializar comunicação com Dynamixel
         self.port_handler = PortHandler(PORT_NAME)
+        self.port_handler.setPacketTimeout(0.5) 
         self.packet_handler = PacketHandler(PROTOCOL_VERSION)
         self.group_bulk_read = GroupBulkRead(self.port_handler, self.packet_handler)
         self.group_bulk_write = GroupBulkWrite(self.port_handler, self.packet_handler)
@@ -124,20 +125,35 @@ class DynamixelReader(Node):
         for motor_id in self.present_motors:
             #desativar o torque para alterar o modo de operação e realizar as configurações iniciais
             self.packet_handler.write1ByteTxRx(self.port_handler, motor_id, TORQUE_ENABLE, 0)
-            self.group_bulk_read.addParam(motor_id, ADDR_PRESENT_CURRENT, TOTAL_LENGTH)
+            #self.group_bulk_read.addParam(motor_id, ADDR_PRESENT_CURRENT, TOTAL_LENGTH)
             self.packet_handler.write1ByteTxRx(self.port_handler, motor_id, ADDR_OPERATING_MODE, CURRENT_BASED_POSITION_MODE)
             self.packet_handler.write4ByteTxRx(self.port_handler, motor_id, ADDR_PROFILE_VELOCITY, self.get_motor_speed(motor_id))
             self.packet_handler.write2ByteTxRx(self.port_handler, motor_id, ADDR_GOAL_CURRENT, GOAL_CURRENT_VALUE)
             self.packet_handler.write1ByteTxRx(self.port_handler, motor_id, TORQUE_ENABLE, 1)
+        
+        # SyncRead para posição, velocidade e corrente
+        self.group_sync_read = GroupSyncRead(self.port_handler, self.packet_handler, ADDR_PRESENT_CURRENT, TOTAL_LENGTH)
+
+        # Adiciona os 16 motores
+        for motor_id in self.present_motors:
+            dxl_addparam_result = self.group_sync_read.addParam(motor_id)
+            if not dxl_addparam_result:
+                print(f"[ERROR] Falha ao adicionar motor {motor_id} ao SyncRead")
+
 
         # Criar um Timer para ler com frequencia de 2khz
-        self.timer = self.create_timer(0.0005, self.read_motors)
+        self.timer = self.create_timer(0.005, self.read_motors)
 
     def read_motors(self):
         """Função para ler os motores e publicar no ROS 2"""
-        if self.group_bulk_read.txRxPacket() != COMM_SUCCESS:
-            self.get_logger().error("Erro ao ler os motores.")
-            return
+
+        #comm_result = self.group_bulk_read.txRxPacket()
+        dxl_comm_result = self.group_sync_read.txRxPacket()
+        # if comm_result != COMM_SUCCESS:
+        #     error_msg = self.packet_handler.getTxRxResult(comm_result)
+        #     self.get_logger().error(f"Erro ao ler os motores: {error_msg}")
+        #     #self.get_logger().error("Erro ao ler os motores.")
+        #     return
         self.time_now = self.get_clock().now()
         time_diff = (self.time_now - self.time_last_vel).nanoseconds / 1e9
         positions, velocities, currents = [], [], []
@@ -147,12 +163,15 @@ class DynamixelReader(Node):
         thumb_data = []
 
         for motor_id in self.present_motors:
-            cur = self.group_bulk_read.getData(motor_id, ADDR_PRESENT_CURRENT, CURR_LENGTH)
+            #cur = self.group_bulk_read.getData(motor_id, ADDR_PRESENT_CURRENT, CURR_LENGTH)
+            cur = self.group_sync_read.getData(motor_id, ADDR_PRESENT_CURRENT, CURR_LENGTH)
             cur = int(np.int16(cur))
-            vel = self.group_bulk_read.getData(motor_id, ADDR_PRESENT_VELOCITY, VEL_LENGTH)
+            #vel = self.group_bulk_read.getData(motor_id, ADDR_PRESENT_VELOCITY, VEL_LENGTH)
+            vel = self.group_sync_read.getData(motor_id, ADDR_PRESENT_VELOCITY, VEL_LENGTH)
             vel = int(np.int32(vel))
-            pos = self.group_bulk_read.getData(motor_id,ADDR_PRESENT_POSITION,POS_LENGTH)
-
+            #pos = self.group_bulk_read.getData(motor_id,ADDR_PRESENT_POSITION,POS_LENGTH)
+            pos = self.group_sync_read.getData(motor_id, ADDR_PRESENT_POSITION, POS_LENGTH)
+            #print(f"Motor {motor_id} | Pos: {pos} | Vel: {vel} | Corrente: {cur}")
             if pos is None or vel is None or cur is None:
                 self.get_logger().warn(f'Falha na leitura do motor {motor_id}')
                 continue
@@ -191,6 +210,7 @@ class DynamixelReader(Node):
             return
 
         self.group_bulk_write.clearParam()
+        
 
         for i in range(0, len(msg.data), 5):
             finger = msg.data[i]  # Índice do dedo
@@ -207,6 +227,7 @@ class DynamixelReader(Node):
                     DXL_LOBYTE(DXL_HIWORD(pos)), 
                     DXL_HIBYTE(DXL_HIWORD(pos))
                 ]
+
                 add_success_pos = self.group_bulk_write.addParam(
                     (motor_id + 4 * finger), ADDR_GOAL_POSITION, 4, param_goal_position
                 )

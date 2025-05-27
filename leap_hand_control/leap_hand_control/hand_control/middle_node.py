@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
 from std_msgs.msg import Int32MultiArray
+from std_msgs.msg import Int32
 import matplotlib.pyplot as plt
 import collections
 import time
@@ -18,6 +19,7 @@ class Middle(Node):
         super().__init__('middle_manager')
 
         self.publisher = self.create_publisher(Int32MultiArray, '/set_fingers_currents', 10)
+        self.state_publisher = self.create_publisher(Int32, '/state', 10)
 
         self.pos = []
         self.vels = []
@@ -58,10 +60,12 @@ class Middle(Node):
             #self.get_logger().info(f'Correntes: {np.ones(4, dtype=int)*GRASPING_CURRENT_VALUE}')
             self.publish_currents(np.ones(4, dtype=int)*GRASPING_CURRENT_VALUE)
             self.is_grasping = 1
+            self.state_publisher.publish(Int32(data=1))
         elif (self.is_grasping == 1) and all(abs(np.array(self.currs)) < 0.5*GOAL_CURRENT_VALUE) and  (all(abs((np.array(self.vels) - self.last_vels)) / time_diff) > 0.1):
             #se a corrente for pequena, o dedo não está a apanhar nada e apenas se movimenta
-            self.publish_currents(np.ones(4, dtype=int)*GOAL_CURRENT_VALUE)
+            self.publish_currents(np.ones(4, dtype=int)*500)
             self.is_grasping = 0
+            self.state_publisher.publish(Int32(data=0))
         
         
         self.time_last_vel = msg.data[len(msg.data)-1]

@@ -59,7 +59,7 @@ class Thumb(Node):
             self.is_grasping = 1
         elif (self.is_grasping == 1) and all(abs(np.array(self.currs)) < 0.5*GOAL_CURRENT_VALUE) and  (all(abs((np.array(self.vels) - self.last_vels)) / time_diff) > 0.1):
             #se a corrente for pequena, o dedo não está a apanhar nada e apenas se movimenta
-            self.publish_currents(np.ones(4, dtype=int)*GOAL_CURRENT_VALUE)
+            self.publish_currents(np.ones(4, dtype=int)*500)
             self.is_grasping = 0
         
         
