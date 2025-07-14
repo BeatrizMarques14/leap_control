@@ -25,7 +25,7 @@ class SaveData(Node):
 
         # Criar timestamp para o nome do ficheiro
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.csv_filename = os.path.join(directory, f"data.csv")
+        self.csv_filename = os.path.join(directory, f"data_test.csv")
 
         # Verificar se o ficheiro já existe e tem conteúdo
         file_exists_and_has_content = os.path.isfile(self.csv_filename) and os.path.getsize(self.csv_filename) > 0

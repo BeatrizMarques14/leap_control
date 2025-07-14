@@ -12,7 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         #('share/' + package_name, ['launch/fingers_nodes.py'])
     ],
     install_requires=['setuptools','dynamixel_sdk'],
